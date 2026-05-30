@@ -1,0 +1,15 @@
+# Binary
+project-manager.exe
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

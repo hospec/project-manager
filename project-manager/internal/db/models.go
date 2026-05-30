@@ -39,6 +39,7 @@ type Task struct {
 	ActualStartDate string `json:"actual_start_date"`
 	ActualEndDate   string `json:"actual_end_date"`
 	SortOrder       int    `json:"sort_order"`
+	Progress        string `json:"progress"`
 	Metadata        string `json:"metadata"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`

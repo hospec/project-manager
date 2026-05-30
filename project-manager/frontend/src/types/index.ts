@@ -13,6 +13,7 @@ export interface TaskGroup {
   project_id: number;
   name: string;
   sort_order: number;
+  progress: string;
   metadata: string;
   created_at: string;
   updated_at: string;
@@ -32,6 +33,7 @@ export interface Task {
   actual_start_date: string;
   actual_end_date: string;
   sort_order: number;
+  progress: string;
   metadata: string;
   created_at: string;
   updated_at: string;

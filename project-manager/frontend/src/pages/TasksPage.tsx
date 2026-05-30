@@ -1,8 +1,8 @@
 import { useParams } from 'react-router-dom';
-import TaskListPage from '../components/tasks/TaskListPage';
+import TaskTablePage from '../components/tasks/TaskTablePage';
 
 export default function TasksPage() {
   const { id } = useParams();
   if (!id) return null;
-  return <TaskListPage projectId={Number(id)} />;
+  return <TaskTablePage projectId={Number(id)} />;
 }

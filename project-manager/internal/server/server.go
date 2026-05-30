@@ -49,10 +49,11 @@ func New(staticFS fs.FS) http.Handler {
 			r.Route("/{id}/tasks", func(r chi.Router) {
 				r.Get("/", listTasks)
 				r.Post("/", createTask)
+				r.Put("/reorder", reorderTasks)
+				r.Put("/{tid}/move", moveTask)
 				r.Get("/{tid}", getTask)
 				r.Put("/{tid}", updateTask)
 				r.Delete("/{tid}", deleteTask)
-				r.Put("/reorder", reorderTasks)
 			})
 
 			r.Route("/{id}/issues", func(r chi.Router) {

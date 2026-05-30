@@ -23,3 +23,135 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+/* Task table — div-based grid layout (tr不支持CSS transform，dnd-kit需要div) */
+.task-table {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.task-table-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 36px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.task-table-row:last-child {
+  border-bottom: none;
+}
+
+.task-table-row.dragging {
+  opacity: 0.4;
+}
+
+.task-table-cell {
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: 14px;
+  border-right: 1px solid #f9fafb;
+}
+
+.task-table-cell:last-child {
+  border-right: none;
+}
+
+.task-table-header-cell {
+  padding: 8px 8px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  position: relative;
+  user-select: none;
+}
+
+.task-table-header-cell:last-child {
+  border-right: none;
+}
+
+/* Column resize handle — now visibly a grey line */
+.task-table-header-cell .resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  cursor: col-resize;
+  z-index: 1;
+  transition: background 0.15s;
+}
+
+.task-table-header-cell .resize-handle:hover,
+.task-table-header-cell .resize-handle:active {
+  background: #3b82f6;
+  width: 3px;
+  right: -1px;
+}
+
+/* Inline edit cell */
+.task-table-cell.cell-editing {
+  box-shadow: inset 0 0 0 2px #3b82f6;
+  border-radius: 3px;
+}
+
+/* Save success flash */
+@keyframes save-flash {
+  0% { background-color: #bbf7d0; }
+  100% { background-color: transparent; }
+}
+
+.task-table-cell.cell-saved {
+  animation: save-flash 0.6s ease-out;
+}
+
+/* Group header row */
+.task-group-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Filter bar */
+.filter-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 50;
+  min-width: 160px;
+  padding: 8px;
+}
+
+/* Drag insertion indicator */
+.drag-insert-line {
+  height: 2px;
+  background: #3b82f6;
+  margin: 0;
+}
+
+.drag-insert-line.cross-group {
+  background: #22c55e;
+}

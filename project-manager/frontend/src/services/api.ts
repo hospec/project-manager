@@ -67,6 +67,8 @@ export const api = {
     request<void>(`${BASE}/projects/${projectId}/tasks/${taskId}`, { method: 'DELETE' }),
   reorderTasks: (projectId: number, groupId: number, order: number[]) =>
     request<void>(`${BASE}/projects/${projectId}/tasks/reorder`, { method: 'PUT', body: JSON.stringify({ group_id: groupId, order }) }),
+  moveTask: (projectId: number, taskId: number, data: { group_id: number | null; after_task_id?: number | null; before?: boolean }) =>
+    request<void>(`${BASE}/projects/${projectId}/tasks/${taskId}/move`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Issues
   listIssues: (projectId: number) =>
