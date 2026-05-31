@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -92,16 +93,50 @@ func updateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input db.Issue
+	var input map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 
+	// Fetch existing for partial update support
+	var existing db.Issue
+	err = db.DB.QueryRow(
+		`SELECT `+issueColumns+` FROM issues WHERE id=? AND project_id=?`,
+		issueID, projectID,
+	).Scan(&existing.ID, &existing.ProjectID, &existing.Title, &existing.Description, &existing.Assignee,
+		&existing.Status, &existing.Priority, &existing.DueDate, &existing.Metadata, &existing.CreatedAt, &existing.UpdatedAt)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "issue not found")
+		return
+	}
+
+	if v, ok := input["title"]; ok {
+		existing.Title = fmt.Sprint(v)
+	}
+	if v, ok := input["description"]; ok {
+		existing.Description = fmt.Sprint(v)
+	}
+	if v, ok := input["assignee"]; ok {
+		existing.Assignee = fmt.Sprint(v)
+	}
+	if v, ok := input["status"]; ok {
+		existing.Status = fmt.Sprint(v)
+	}
+	if v, ok := input["priority"]; ok {
+		existing.Priority = fmt.Sprint(v)
+	}
+	if v, ok := input["due_date"]; ok {
+		existing.DueDate = fmt.Sprint(v)
+	}
+	if v, ok := input["metadata"]; ok {
+		existing.Metadata = fmt.Sprint(v)
+	}
+
 	now := db.Now()
 	result, err := db.DB.Exec(
 		`UPDATE issues SET title=?, description=?, assignee=?, status=?, priority=?, due_date=?, metadata=?, updated_at=? WHERE id=? AND project_id=?`,
-		input.Title, input.Description, input.Assignee, input.Status, input.Priority, input.DueDate, input.Metadata, now, issueID, projectID,
+		existing.Title, existing.Description, existing.Assignee, existing.Status, existing.Priority, existing.DueDate, existing.Metadata, now, issueID, projectID,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -111,10 +146,8 @@ func updateIssue(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "issue not found")
 		return
 	}
-	input.ID = issueID
-	input.ProjectID = projectID
-	input.UpdatedAt = now
-	writeJSON(w, http.StatusOK, input)
+	existing.UpdatedAt = now
+	writeJSON(w, http.StatusOK, existing)
 }
 
 func deleteIssue(w http.ResponseWriter, r *http.Request) {

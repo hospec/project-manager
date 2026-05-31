@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -85,16 +86,46 @@ func updateNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input db.Note
+	var input map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 
+	// Fetch existing for partial update support
+	var existing db.Note
+	err = db.DB.QueryRow(
+		`SELECT `+noteColumns+` FROM notes WHERE id=? AND project_id=?`,
+		noteID, projectID,
+	).Scan(&existing.ID, &existing.ProjectID, &existing.Title, &existing.Content, &existing.IsPinned,
+		&existing.Metadata, &existing.CreatedAt, &existing.UpdatedAt)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "note not found")
+		return
+	}
+
+	if v, ok := input["title"]; ok {
+		existing.Title = fmt.Sprint(v)
+	}
+	if v, ok := input["content"]; ok {
+		existing.Content = fmt.Sprint(v)
+	}
+	if v, ok := input["is_pinned"]; ok {
+		switch val := v.(type) {
+		case bool:
+			existing.IsPinned = val
+		case float64:
+			existing.IsPinned = val != 0
+		}
+	}
+	if v, ok := input["metadata"]; ok {
+		existing.Metadata = fmt.Sprint(v)
+	}
+
 	now := db.Now()
 	result, err := db.DB.Exec(
 		`UPDATE notes SET title=?, content=?, is_pinned=?, metadata=?, updated_at=? WHERE id=? AND project_id=?`,
-		input.Title, input.Content, input.IsPinned, input.Metadata, now, noteID, projectID,
+		existing.Title, existing.Content, existing.IsPinned, existing.Metadata, now, noteID, projectID,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -104,10 +135,8 @@ func updateNote(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "note not found")
 		return
 	}
-	input.ID = noteID
-	input.ProjectID = projectID
-	input.UpdatedAt = now
-	writeJSON(w, http.StatusOK, input)
+	existing.UpdatedAt = now
+	writeJSON(w, http.StatusOK, existing)
 }
 
 func deleteNote(w http.ResponseWriter, r *http.Request) {

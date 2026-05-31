@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../services/api';
+import type { Note } from '../../types';
 import NoteList from './NoteList';
 import NoteEditor from './NoteEditor';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -23,9 +24,10 @@ export default function NotesPage({ projectId }: Props) {
 
   const createMutation = useMutation({
     mutationFn: () => api.createNote(projectId, { title: '新建笔记', content: '', is_pinned: false, metadata: '{}' }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['notes', projectId] });
-      setSelectedId(data.id);
+    onSuccess: (newNote) => {
+      // Optimistically add to cache so it shows immediately
+      queryClient.setQueryData<Note[]>(['notes', projectId], (old = []) => [newNote, ...old]);
+      setSelectedId(newNote.id);
       toast.success('笔记已创建');
     },
     onError: () => toast.error('创建失败'),
@@ -60,7 +62,7 @@ export default function NotesPage({ projectId }: Props) {
             onCreate={() => createMutation.mutate()}
             onDelete={(id) => setDeletingId(id)}
           />
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto">
             {selectedNote ? (
               <NoteEditor key={selectedNote.id} note={selectedNote} projectId={projectId} />
             ) : (
