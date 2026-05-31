@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     actual_start_date TEXT DEFAULT '',
     actual_end_date TEXT DEFAULT '',
     sort_order INTEGER DEFAULT 0,
+    progress TEXT DEFAULT '',
     metadata TEXT DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))

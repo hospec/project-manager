@@ -44,7 +44,7 @@ export default function TaskFormModal({ projectId, taskId, groupId, onClose }: P
   const [form, setForm] = useState<TaskFormData>({
     title: '', description: '', assignee: '', status: 'todo', priority: 'medium',
     planned_start_date: '', planned_end_date: '', actual_start_date: '', actual_end_date: '',
-    group_id: groupId ?? null, sort_order: 0, metadata: '{}',
+    group_id: groupId ?? null, sort_order: 0, progress: '', risk: '', metadata: '{}',
   });
 
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function TaskFormModal({ projectId, taskId, groupId, onClose }: P
         status: task.status, priority: task.priority,
         planned_start_date: task.planned_start_date, planned_end_date: task.planned_end_date,
         actual_start_date: task.actual_start_date, actual_end_date: task.actual_end_date,
-        group_id: task.group_id, sort_order: task.sort_order, metadata: task.metadata,
+        group_id: task.group_id, sort_order: task.sort_order, progress: task.progress, risk: task.risk, metadata: task.metadata,
       });
     }
   }, [task]);

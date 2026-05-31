@@ -16,13 +16,13 @@ func scanTask(scanner RowScanner) (db.Task, error) {
 	var t db.Task
 	err := scanner.Scan(&t.ID, &t.ProjectID, &t.GroupID, &t.Title, &t.Description, &t.Assignee,
 		&t.Status, &t.Priority, &t.PlannedStartDate, &t.PlannedEndDate,
-		&t.ActualStartDate, &t.ActualEndDate, &t.SortOrder, &t.Progress, &t.Metadata, &t.CreatedAt, &t.UpdatedAt)
+		&t.ActualStartDate, &t.ActualEndDate, &t.SortOrder, &t.Progress, &t.Risk, &t.Metadata, &t.CreatedAt, &t.UpdatedAt)
 	return t, err
 }
 
 const taskColumns = `id, project_id, group_id, title, description, assignee, status, priority,
 	planned_start_date, planned_end_date, actual_start_date, actual_end_date,
-	sort_order, progress, metadata, created_at, updated_at`
+	sort_order, progress, risk, metadata, created_at, updated_at`
 
 func listTasks(w http.ResponseWriter, r *http.Request) {
 	projectID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
@@ -105,11 +105,11 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 	result, err := db.DB.Exec(
 		`INSERT INTO tasks (project_id, group_id, title, description, assignee, status, priority,
 		 planned_start_date, planned_end_date, actual_start_date, actual_end_date,
-		 sort_order, progress, metadata, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 sort_order, progress, risk, metadata, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		projectID, t.GroupID, t.Title, t.Description, t.Assignee, t.Status, t.Priority,
 		t.PlannedStartDate, t.PlannedEndDate, t.ActualStartDate, t.ActualEndDate,
-		maxSort+1000, t.Progress, t.Metadata, now, now,
+		maxSort+1000, t.Progress, t.Risk, t.Metadata, now, now,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -213,7 +213,10 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 			existing.SortOrder = int(f)
 		}
 	}
-	if v, ok := input["progress"]; ok {
+	if v, ok := input["risk"]; ok {
+			existing.Risk = fmt.Sprint(v)
+		}
+		if v, ok := input["progress"]; ok {
 		existing.Progress = fmt.Sprint(v)
 	}
 	if v, ok := input["metadata"]; ok {
@@ -224,10 +227,10 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 	result, err := db.DB.Exec(
 		`UPDATE tasks SET group_id=?, title=?, description=?, assignee=?, status=?, priority=?,
 		 planned_start_date=?, planned_end_date=?, actual_start_date=?, actual_end_date=?,
-		 sort_order=?, progress=?, metadata=?, updated_at=? WHERE id=? AND project_id=?`,
+		 sort_order=?, progress=?, risk=?, metadata=?, updated_at=? WHERE id=? AND project_id=?`,
 		existing.GroupID, existing.Title, existing.Description, existing.Assignee, existing.Status, existing.Priority,
 		existing.PlannedStartDate, existing.PlannedEndDate, existing.ActualStartDate, existing.ActualEndDate,
-		existing.SortOrder, existing.Progress, existing.Metadata, now, taskID, projectID,
+		existing.SortOrder, existing.Progress, existing.Risk, existing.Metadata, now, taskID, projectID,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

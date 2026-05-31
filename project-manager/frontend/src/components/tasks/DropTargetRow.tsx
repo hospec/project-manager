@@ -2,10 +2,10 @@ import { useDroppable } from '@dnd-kit/core';
 
 interface Props {
   groupId: number | null;
-  colCount: number;
+  colCount?: number;
 }
 
-export default function DropTargetRow({ groupId, colCount }: Props) {
+export default function DropTargetRow({ groupId }: Props) {
   const id = `drop-zone-${groupId ?? 'ungrouped'}`;
   const { setNodeRef, isOver } = useDroppable({
     id,

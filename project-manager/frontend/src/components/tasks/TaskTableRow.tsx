@@ -32,7 +32,7 @@ const STATUS_OPTIONS = [
 
 type ColKey = 'title' | 'priority' | 'planned_start_date' | 'planned_end_date' | 'assignee' | 'status' | 'progress';
 
-export default function TaskTableRow({ task, projectId, rowNumber, colWidths }: Props) {
+export default function TaskTableRow({ task, projectId, rowNumber: _rowNumber, colWidths }: Props) {
   const queryClient = useQueryClient();
   const [editingCol, setEditingCol] = useState<ColKey | null>(null);
   const [editValue, setEditValue] = useState('');

@@ -40,9 +40,20 @@ type Task struct {
 	ActualEndDate   string `json:"actual_end_date"`
 	SortOrder       int    `json:"sort_order"`
 	Progress        string `json:"progress"`
+	Risk            string `json:"risk"`
 	Metadata        string `json:"metadata"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`
+}
+
+// TaskDailyNote represents daily cell content for a task in calendar
+type TaskDailyNote struct {
+	ID        int64  `json:"id"`
+	TaskID    int64  `json:"task_id"`
+	ProjectID int64  `json:"project_id"`
+	Date      string `json:"date"`
+	Content   string `json:"content"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 // Issue represents an issue/todo item

@@ -54,6 +54,7 @@ func New(staticFS fs.FS) http.Handler {
 				r.Get("/{tid}", getTask)
 				r.Put("/{tid}", updateTask)
 				r.Delete("/{tid}", deleteTask)
+				r.Put("/{tid}/daily-notes", updateDailyNotes)
 			})
 
 			r.Route("/{id}/issues", func(r chi.Router) {
@@ -70,8 +71,8 @@ func New(staticFS fs.FS) http.Handler {
 				r.Delete("/{nid}", deleteNote)
 			})
 
-			r.Get("/{id}/calendar", getCalendarEvents)
-			r.Post("/{id}/calendar/complete", recordCompletion)
+			r.Get("/{id}/calendar", getCalendar)
+			
 		})
 
 		r.Get("/export/project/{id}", exportProject)

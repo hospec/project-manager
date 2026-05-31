@@ -13,7 +13,6 @@ export interface TaskGroup {
   project_id: number;
   name: string;
   sort_order: number;
-  progress: string;
   metadata: string;
   created_at: string;
   updated_at: string;
@@ -34,9 +33,27 @@ export interface Task {
   actual_end_date: string;
   sort_order: number;
   progress: string;
+  risk: string;
   metadata: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskDailyNote {
+  id: number;
+  task_id: number;
+  project_id: number;
+  date: string;
+  content: string;
+  updated_at: string;
+}
+
+export interface CalendarTask extends Task {
+  daily_notes: Record<string, string>;
+}
+
+export interface CalendarResponse {
+  tasks: CalendarTask[];
 }
 
 export interface Issue {

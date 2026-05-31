@@ -17,7 +17,7 @@ interface Props {
   colCount: number;
 }
 
-export default function TaskGroupHeader({ group, taskCount, collapsed, onToggle, projectId, colCount }: Props) {
+export default function TaskGroupHeader({ group, taskCount, collapsed, onToggle, projectId }: Props) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(group?.name ?? '未分组任务');
   const [showDelete, setShowDelete] = useState(false);

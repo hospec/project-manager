@@ -11,6 +11,23 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
+// safeAddColumn adds a column only if it doesn't already exist.
+func safeAddColumn(table, column, definition string) error {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?", table, column).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		_, err = DB.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition)
+		if err != nil {
+			return fmt.Errorf("add column %s.%s: %w", table, column, err)
+		}
+		fmt.Printf("Added column %s to %s\n", column, table)
+	}
+	return nil
+}
+
 // RunMigrations executes any pending SQL migrations in order
 func RunMigrations() error {
 	_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -19,6 +36,11 @@ func RunMigrations() error {
 	)`)
 	if err != nil {
 		return fmt.Errorf("create schema_migrations: %w", err)
+	}
+
+	// Ensure progress column exists (for DBs created before 001 was updated)
+	if err := safeAddColumn("tasks", "progress", "TEXT DEFAULT ''"); err != nil {
+		return fmt.Errorf("ensure progress column: %w", err)
 	}
 
 	entries, err := migrationsFS.ReadDir("migrations")

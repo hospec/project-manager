@@ -10,26 +10,41 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func getCalendarEvents(w http.ResponseWriter, r *http.Request) {
+// CalendarTask is a task with its daily notes for a date range
+type CalendarTask struct {
+	db.Task
+	DailyNotes map[string]string `json:"daily_notes"` // date -> content
+}
+
+// CalendarResponse is the full calendar response for a month
+type CalendarResponse struct {
+	Tasks []CalendarTask `json:"tasks"`
+}
+
+func getCalendar(w http.ResponseWriter, r *http.Request) {
 	projectID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid project id")
 		return
 	}
 
-	start := r.URL.Query().Get("start")
-	end := r.URL.Query().Get("end")
-	if start == "" || end == "" {
-		writeError(w, http.StatusBadRequest, "start and end query params required")
+	// month format: 2026-06
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		writeError(w, http.StatusBadRequest, "month query param required (YYYY-MM)")
 		return
 	}
 
-	// Get tasks that have planned dates within the range
+	// Get ALL tasks that have dates overlapping this month
+	monthStart := month + "-01"
+	monthEnd := month + "-31" // SQLite will handle invalid dates gracefully
+
 	rows, err := db.DB.Query(
 		`SELECT `+taskColumns+` FROM tasks
 		 WHERE project_id=? AND planned_start_date != '' AND planned_end_date != ''
-		 AND planned_start_date <= ? AND planned_end_date >= ?`,
-		projectID, end, start,
+		 AND planned_start_date <= ? AND planned_end_date >= ?
+		 ORDER BY sort_order`,
+		projectID, monthEnd, monthStart,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -37,43 +52,60 @@ func getCalendarEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	type CalendarEventResponse struct {
-		db.Task
-		CompletionRecords []db.CalendarEvent `json:"completion_records,omitempty"`
-	}
-
-	events := make([]CalendarEventResponse, 0)
+	tasks := make([]CalendarTask, 0)
 	for rows.Next() {
 		t, err := scanTask(rows)
 		if err != nil {
 			continue
 		}
-		evt := CalendarEventResponse{Task: t}
-		events = append(events, evt)
+		ct := CalendarTask{Task: t, DailyNotes: make(map[string]string)}
+		tasks = append(tasks, ct)
 	}
 	rows.Close()
 
-	// Now fetch completion records for each task (can't query inside rows loop with MaxOpenConns=1)
-	for i := range events {
-		crRows, err := db.DB.Query(
-			`SELECT id, project_id, task_id, date, completion_status, notes, metadata, created_at, updated_at
-			 FROM calendar_events WHERE task_id=? AND date >= ? AND date <= ? ORDER BY date`,
-			events[i].ID, start, end,
+	// Fetch daily notes for all tasks in one go
+	taskIDs := make([]interface{}, 0)
+	placeholders := ""
+	for i, t := range tasks {
+		if i > 0 {
+			placeholders += ","
+		}
+		placeholders += "?"
+		taskIDs = append(taskIDs, t.ID)
+	}
+
+	if len(taskIDs) > 0 {
+		dnRows, err := db.DB.Query(
+			`SELECT task_id, date, content FROM task_daily_notes
+			 WHERE task_id IN (`+placeholders+`) AND date >= ? AND date <= ?`,
+			append(taskIDs, monthStart, monthEnd)...,
 		)
 		if err == nil {
-			for crRows.Next() {
-				var cr db.CalendarEvent
-				crRows.Scan(&cr.ID, &cr.ProjectID, &cr.TaskID, &cr.Date, &cr.CompletionStatus, &cr.Notes, &cr.Metadata, &cr.CreatedAt, &cr.UpdatedAt)
-				events[i].CompletionRecords = append(events[i].CompletionRecords, cr)
+			defer dnRows.Close()
+			for dnRows.Next() {
+				var taskID int64
+				var date, content string
+				dnRows.Scan(&taskID, &date, &content)
+				for i := range tasks {
+					if tasks[i].ID == taskID {
+						tasks[i].DailyNotes[date] = content
+						break
+					}
+				}
 			}
-			crRows.Close()
+			dnRows.Close()
 		}
 	}
 
-	writeJSON(w, http.StatusOK, events)
+	writeJSON(w, http.StatusOK, CalendarResponse{Tasks: tasks})
 }
 
-func recordCompletion(w http.ResponseWriter, r *http.Request) {
+func updateDailyNotes(w http.ResponseWriter, r *http.Request) {
+	taskID, err := strconv.ParseInt(chi.URLParam(r, "tid"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid task id")
+		return
+	}
 	projectID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid project id")
@@ -81,10 +113,8 @@ func recordCompletion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		TaskID           *int64 `json:"task_id"`
-		Date             string `json:"date"`
-		CompletionStatus string `json:"completion_status"`
-		Notes            string `json:"notes"`
+		Date    string `json:"date"`
+		Content string `json:"content"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
@@ -94,39 +124,18 @@ func recordCompletion(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "date is required")
 		return
 	}
-	if input.CompletionStatus == "" {
-		input.CompletionStatus = "partial"
-	}
 
-	// Upsert: if record exists for this task+date, update; else insert
 	now := db.Now()
-	if input.TaskID != nil {
-		var existingID int64
-		err := db.DB.QueryRow(
-			`SELECT id FROM calendar_events WHERE project_id=? AND task_id=? AND date=?`,
-			projectID, *input.TaskID, input.Date,
-		).Scan(&existingID)
-
-		if err == nil {
-			db.DB.Exec(
-				`UPDATE calendar_events SET completion_status=?, notes=?, updated_at=? WHERE id=?`,
-				input.CompletionStatus, input.Notes, now, existingID,
-			)
-			writeJSON(w, http.StatusOK, map[string]interface{}{"id": existingID, "updated": true})
-			return
-		}
-	}
-
-	result, err := db.DB.Exec(
-		`INSERT INTO calendar_events (project_id, task_id, date, completion_status, notes, metadata, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, '{}', ?, ?)`,
-		projectID, input.TaskID, input.Date, input.CompletionStatus, input.Notes, now, now,
+	_, err = db.DB.Exec(
+		`INSERT INTO task_daily_notes (task_id, project_id, date, content, updated_at)
+		 VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(task_id, date) DO UPDATE SET content=?, updated_at=?`,
+		taskID, projectID, input.Date, input.Content, now, input.Content, now,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	id, _ := result.LastInsertId()
-	writeJSON(w, http.StatusCreated, map[string]interface{}{"id": id, "created": true})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true})
 }

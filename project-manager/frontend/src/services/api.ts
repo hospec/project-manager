@@ -4,7 +4,7 @@ import type {
   Task, TaskFormData,
   Issue, IssueFormData,
   Note, NoteFormData,
-  CalendarEvent, CalendarEventData,
+  CalendarResponse,
   ExportData,
 } from '../types';
 
@@ -91,10 +91,10 @@ export const api = {
     request<void>(`${BASE}/projects/${projectId}/notes/${noteId}`, { method: 'DELETE' }),
 
   // Calendar
-  getCalendarEvents: (projectId: number, start: string, end: string) =>
-    request<CalendarEventData[]>(`${BASE}/projects/${projectId}/calendar?start=${start}&end=${end}`),
-  recordCompletion: (projectId: number, data: { task_id?: number; date: string; completion_status: string; notes?: string }) =>
-    request<CalendarEvent>(`${BASE}/projects/${projectId}/calendar/complete`, { method: 'POST', body: JSON.stringify(data) }),
+  getCalendar: (projectId: number, month: string) =>
+    request<CalendarResponse>(`${BASE}/projects/${projectId}/calendar?month=${month}`),
+  updateDailyNotes: (projectId: number, taskId: number, date: string, content: string) =>
+    request<void>(`${BASE}/projects/${projectId}/tasks/${taskId}/daily-notes`, { method: 'PUT', body: JSON.stringify({ date, content }) }),
 
   // Import/Export
   exportProject: (projectId: number) =>

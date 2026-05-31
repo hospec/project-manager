@@ -8,7 +8,7 @@ import {
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
 import { api } from '../../services/api';
-import type { Task, TaskGroup } from '../../types';
+import type { Task } from '../../types';
 import TaskTableHeader from './TaskTableHeader';
 import TaskTableRow from './TaskTableRow';
 import TaskGroupHeader from './TaskGroupHeader';
@@ -125,6 +125,7 @@ export default function TaskTablePage({ projectId }: Props) {
         actual_end_date: '',
         sort_order: 0,
         progress: '',
+        risk: '',
         metadata: '{}',
       }),
     onSuccess: () => {
