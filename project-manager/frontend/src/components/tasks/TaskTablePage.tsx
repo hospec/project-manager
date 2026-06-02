@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -6,7 +6,7 @@ import {
   DragOverlay, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { Plus } from 'lucide-react';
+import { Plus, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Task } from '../../types';
 import TaskTableHeader from './TaskTableHeader';
@@ -50,6 +50,38 @@ export default function TaskTablePage({ projectId }: Props) {
       return { ...DEFAULT_COL_WIDTHS };
     }
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    toast.promise(api.exportTasksExcel(projectId), {
+      loading: '导出中...',
+      success: 'Excel 导出成功',
+      error: '导出失败',
+    });
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result: any = await api.importTasksExcel(projectId, file);
+      if (result.preview) {
+        if (result.errors > 0) {
+          toast.error(`${result.errors} 行有错误，请修正后重试`);
+        } else {
+          // Confirm import
+          const confirmResult: any = await api.confirmImportExcel(projectId, file);
+          toast.success(`已导入：新增 ${confirmResult.created} 个，更新 ${confirmResult.updated} 个`);
+        }
+      }
+      await queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['overview', projectId] });
+    } catch (err: any) {
+      toast.error('导入失败: ' + (err.message || '未知错误'));
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const { data: groups = [], isLoading: gLoading } = useQuery({
     queryKey: ['task-groups', projectId],
@@ -131,6 +163,7 @@ export default function TaskTablePage({ projectId }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['overview', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['calendar', projectId] });
       toast.success('任务已创建');
       setAddingInGroup(null);
     },
@@ -284,6 +317,21 @@ export default function TaskTablePage({ projectId }: Props) {
               <Plus size={16} /> 新建组
             </button>
           )}
+          <div className="flex gap-1 border-l border-gray-300 pl-2 ml-1">
+            <button onClick={handleExportExcel}
+              className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              title="导出 Excel"
+            ><Download size={14} /></button>
+            <button onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              title="导入 Excel"
+            ><Upload size={14} /></button>
+            <button onClick={() => api.downloadTemplate()}
+              className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              title="下载模板"
+            ><FileSpreadsheet size={14} /></button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
+          </div>
         </div>
       </div>
 

@@ -5,13 +5,6 @@ import { api } from '../../services/api';
 import type { ProjectFormData } from '../../types';
 import Modal from '../common/Modal';
 
-const phases = [
-  { value: 'planning', label: '规划' },
-  { value: 'execution', label: '执行' },
-  { value: 'monitoring', label: '监控' },
-  { value: 'closure', label: '收尾' },
-];
-
 interface Props {
   projectId: number | null;
   onClose: () => void;
@@ -28,8 +21,16 @@ export default function ProjectFormModal({ projectId, onClose, onCreated }: Prop
     enabled: isEdit,
   });
 
+  const { data: phaseList = [] } = useQuery({
+    queryKey: ['phases'],
+    queryFn: api.listPhases,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const defaultPhase = phaseList.length > 0 ? phaseList[0].phase_key : 'planning';
+
   const [form, setForm] = useState<ProjectFormData>({
-    name: '', description: '', phase: 'planning', metadata: '{}',
+    name: '', description: '', phase: defaultPhase, metadata: '{}',
   });
 
   useEffect(() => {
@@ -98,11 +99,11 @@ export default function ProjectFormModal({ projectId, onClose, onCreated }: Prop
           <label className="block text-sm font-medium text-gray-700 mb-1">当前阶段</label>
           <select
             value={form.phase}
-            onChange={(e) => setForm({ ...form, phase: e.target.value as ProjectFormData['phase'] })}
+            onChange={(e) => setForm({ ...form, phase: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
           >
-            {phases.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
+            {phaseList.map((p) => (
+              <option key={p.id} value={p.phase_key}>{p.label}</option>
             ))}
           </select>
         </div>

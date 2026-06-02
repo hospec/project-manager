@@ -133,6 +133,27 @@ type ExportData struct {
 	Data          ExportPayload  `json:"data"`
 }
 
+// ProjectPhase represents a configurable project phase
+type ProjectPhase struct {
+	ID        int64  `json:"id"`
+	PhaseKey  string `json:"phase_key"`
+	Label     string `json:"label"`
+	Color     string `json:"color"`
+	SortOrder int    `json:"sort_order"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// Personnel represents a team member
+type Personnel struct {
+	ID              int64  `json:"id"`
+	Name            string `json:"name"`
+	Title           string `json:"title"`
+	Responsibilities string `json:"responsibilities"`
+	CreatedAt       string `json:"created_at"`
+	UpdatedAt       string `json:"updated_at"`
+}
+
 // ExportPayload holds all exported table data
 type ExportPayload struct {
 	Projects       []Project       `json:"projects"`
@@ -141,10 +162,12 @@ type ExportPayload struct {
 	Issues         []Issue         `json:"issues"`
 	Notes          []Note          `json:"notes"`
 	CalendarEvents []CalendarEvent `json:"calendar_events"`
+	Phases         []ProjectPhase  `json:"phases"`
+	PersonnelList  []Personnel     `json:"personnel"`
 }
 
 const AppVersion = "1.0.0"
-const CurrentSchemaVersion = 1
+const CurrentSchemaVersion = 4
 
 func Now() string {
 	return time.Now().Format("2006-01-02T15:04:05-07:00")

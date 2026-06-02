@@ -75,9 +75,26 @@ func New(staticFS fs.FS) http.Handler {
 			
 		})
 
+		r.Route("/settings", func(r chi.Router) {
+			r.Get("/phases", listPhases)
+			r.Post("/phases", createPhase)
+			r.Put("/phases/{pid}", updatePhase)
+			r.Put("/phases/reorder", reorderPhases)
+			r.Delete("/phases/{pid}", deletePhase)
+			r.Get("/personnel", listPersonnel)
+			r.Post("/personnel", createPersonnel)
+			r.Put("/personnel/{pid}", updatePersonnel)
+			r.Delete("/personnel/{pid}", deletePersonnel)
+		})
+
 		r.Get("/export/project/{id}", exportProject)
 		r.Get("/export/all", exportAll)
 		r.Post("/import", importData)
+
+		// Excel routes
+		r.Get("/projects/{id}/tasks/export/excel", exportTasksExcel)
+		r.Post("/projects/{id}/tasks/import/excel", importTasksExcel)
+		r.Get("/tasks/template/excel", getExcelTemplate)
 	})
 
 	// SPA fallback: serve index.html for non-API, non-file requests

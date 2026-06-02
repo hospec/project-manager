@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ListTodo, Calendar, AlertCircle, StickyNote } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Calendar, AlertCircle, StickyNote, Settings } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import ProjectSwitcher from '../project/ProjectSwitcher';
 
-const navItems = [
+const projectNavItems = [
   { to: 'dashboard', icon: LayoutDashboard, label: '项目概览' },
   { to: 'tasks', icon: ListTodo, label: '任务清单' },
   { to: 'calendar', icon: Calendar, label: '日程表' },
@@ -25,7 +25,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 p-2">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {projectNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={selectedProjectId ? `/projects/${selectedProjectId}/${to}` : '#'}
@@ -39,6 +39,20 @@ export default function Sidebar() {
             {label}
           </NavLink>
         ))}
+
+        <div className="my-2 border-t border-gray-700" />
+
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg mb-1 text-sm transition-colors ${
+              isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800'
+            }`
+          }
+        >
+          <Settings size={18} />
+          系统设置
+        </NavLink>
       </nav>
 
       <div className="p-3 border-t border-gray-700 text-xs text-gray-500">

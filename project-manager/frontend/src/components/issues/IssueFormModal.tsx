@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../services/api';
-import type { IssueFormData } from '../../types';
+import type { IssueFormData, Personnel } from '../../types';
 import Modal from '../common/Modal';
 
 const statuses = [
@@ -34,6 +34,12 @@ export default function IssueFormModal({ projectId, issueId, onClose }: Props) {
   });
 
   const issue = isEdit ? allIssues.find((i) => i.id === issueId) : null;
+
+  const { data: personnel = [] } = useQuery<Personnel[]>({
+    queryKey: ['personnel'],
+    queryFn: api.listPersonnel,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const [form, setForm] = useState<IssueFormData>({
     title: '', description: '', assignee: '', status: 'open', priority: 'medium', due_date: '', metadata: '{}',
@@ -77,8 +83,14 @@ export default function IssueFormModal({ projectId, issueId, onClose }: Props) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">责任人</label>
-            <input type="text" value={form.assignee} onChange={(e) => setForm({ ...form, assignee: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500" />
+            <input type="text" value={form.assignee} list="personnel-list"
+              onChange={(e) => setForm({ ...form, assignee: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500" placeholder="输入姓名或从列表选择" />
+            <datalist id="personnel-list">
+              {personnel.map(p => (
+                <option key={p.id} value={p.name}>{p.title ? `${p.name} — ${p.title}` : p.name}</option>
+              ))}
+            </datalist>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">截止日期</label>

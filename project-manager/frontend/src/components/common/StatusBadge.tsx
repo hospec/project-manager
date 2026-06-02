@@ -1,4 +1,19 @@
+import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
+import { api } from '../../services/api';
+import type { ProjectPhase } from '../../types';
+
+// Fallback color class map
+const colorBadgeMap: Record<string, string> = {
+  blue: 'bg-blue-100 text-blue-700',
+  green: 'bg-green-100 text-green-700',
+  yellow: 'bg-yellow-100 text-yellow-700',
+  purple: 'bg-purple-100 text-purple-700',
+  red: 'bg-red-100 text-red-700',
+  orange: 'bg-orange-100 text-orange-700',
+  teal: 'bg-teal-100 text-teal-700',
+  slate: 'bg-slate-100 text-slate-700',
+};
 
 const statusColors: Record<string, string> = {
   todo: 'bg-gray-100 text-gray-700',
@@ -46,18 +61,18 @@ export function PriorityBadge({ priority }: { priority: string }) {
 }
 
 export function PhaseBadge({ phase }: { phase: string }) {
-  const labels: Record<string, string> = {
-    planning: '规划', execution: '执行', monitoring: '监控', closure: '收尾',
-  };
-  const colors: Record<string, string> = {
-    planning: 'bg-purple-100 text-purple-700',
-    execution: 'bg-blue-100 text-blue-700',
-    monitoring: 'bg-yellow-100 text-yellow-700',
-    closure: 'bg-green-100 text-green-700',
-  };
+  const { data: phases = [] } = useQuery<ProjectPhase[]>({
+    queryKey: ['phases'],
+    queryFn: api.listPhases,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const found = phases.find(p => p.phase_key === phase);
+  const label = found?.label || phase;
+  const colorClass = found ? (colorBadgeMap[found.color] || '') : '';
   return (
-    <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', colors[phase] || '')}>
-      {labels[phase] || phase}
+    <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', colorClass)}>
+      {label}
     </span>
   );
 }

@@ -41,7 +41,10 @@ function formatDate(date: Date): string {
 }
 
 function toDateStr(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function weekDays(week: { start: Date; end: Date }): Date[] {
@@ -123,6 +126,7 @@ export default function CalendarPage({ projectId }: Props) {
   const { data: calData, isLoading, isError } = useQuery({
     queryKey: ['calendar', projectId, monthStr],
     queryFn: () => api.getCalendar(projectId, monthStr),
+    staleTime: 0,
   });
 
   const tasks: CalendarTask[] = calData?.tasks ?? [];

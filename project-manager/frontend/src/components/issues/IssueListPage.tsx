@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../../services/api';
-import type { Issue } from '../../types';
+import type { Issue, Personnel } from '../../types';
 import ConfirmDialog from '../common/ConfirmDialog';
 import EmptyState from '../common/EmptyState';
 
@@ -106,6 +106,12 @@ export default function IssueListPage({ projectId }: Props) {
     staleTime: 0,
   });
 
+  const { data: personnel = [] } = useQuery<Personnel[]>({
+    queryKey: ['personnel'],
+    queryFn: api.listPersonnel,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const saveMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Record<string, unknown> }) =>
       api.updateIssue(projectId, id, data),
@@ -150,7 +156,14 @@ export default function IssueListPage({ projectId }: Props) {
 
   useEffect(() => {
     if (!editingCell) return;
-    if (inputRef.current instanceof HTMLInputElement) { inputRef.current.focus(); inputRef.current.select(); }
+    if (inputRef.current instanceof HTMLInputElement) {
+      inputRef.current.focus();
+      inputRef.current.select();
+      // Open date picker immediately for date fields
+      if (editingCell.col === 'due_date') {
+        try { inputRef.current.showPicker(); } catch {}
+      }
+    }
   }, [editingCell]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -281,7 +294,13 @@ export default function IssueListPage({ projectId }: Props) {
                   <div className="task-table-cell cell-editing" style={{ width: colWidths.assignee || 100, flex: 'none', padding: '2px 6px' }}>
                     <input ref={inputRef as React.Ref<HTMLInputElement>} value={editValue}
                       onChange={e => setEditValue(e.target.value)} onBlur={saveEdit} onKeyDown={handleKeyDown}
-                      placeholder="负责人" className="w-full text-xs text-gray-900 placeholder:text-gray-400 border-0 focus:outline-none bg-transparent" />
+                      placeholder="负责人" list="personnel-list-issues"
+                      className="w-full text-xs text-gray-900 placeholder:text-gray-400 border-0 focus:outline-none bg-transparent" />
+                    <datalist id="personnel-list-issues">
+                      {personnel.map(p => (
+                        <option key={p.id} value={p.name}>{p.title ? `${p.name} — ${p.title}` : p.name}</option>
+                      ))}
+                    </datalist>
                   </div>
                 ) : undefined
               )}

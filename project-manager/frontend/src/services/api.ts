@@ -1,5 +1,6 @@
 import type {
   Project, ProjectFormData, ProjectOverview,
+  ProjectPhase, Personnel,
   TaskGroup, TaskGroupFormData,
   Task, TaskFormData,
   Issue, IssueFormData,
@@ -17,7 +18,12 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `${res.status} ${res.statusText}`);
+    let message = body || `${res.status} ${res.statusText}`;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed.error) message = parsed.error;
+    } catch {}
+    throw new Error(message);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -95,6 +101,64 @@ export const api = {
     request<CalendarResponse>(`${BASE}/projects/${projectId}/calendar?month=${month}`),
   updateDailyNotes: (projectId: number, taskId: number, date: string, content: string) =>
     request<void>(`${BASE}/projects/${projectId}/tasks/${taskId}/daily-notes`, { method: 'PUT', body: JSON.stringify({ date, content }) }),
+
+  // Settings - Phases
+  listPhases: () => request<ProjectPhase[]>(`${BASE}/settings/phases`),
+  createPhase: (data: { phase_key: string; label: string; color?: string }) =>
+    request<ProjectPhase>(`${BASE}/settings/phases`, { method: 'POST', body: JSON.stringify(data) }),
+  updatePhase: (id: number, data: { label?: string; color?: string; sort_order?: number }) =>
+    request<ProjectPhase>(`${BASE}/settings/phases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  reorderPhases: (order: { id: number; sort_order: number }[]) =>
+    request<void>(`${BASE}/settings/phases/reorder`, { method: 'PUT', body: JSON.stringify(order) }),
+  deletePhase: (id: number) =>
+    request<void>(`${BASE}/settings/phases/${id}`, { method: 'DELETE' }),
+
+  // Settings - Personnel
+  listPersonnel: () => request<Personnel[]>(`${BASE}/settings/personnel`),
+  createPersonnel: (data: { name: string; title?: string; responsibilities?: string }) =>
+    request<Personnel>(`${BASE}/settings/personnel`, { method: 'POST', body: JSON.stringify(data) }),
+  updatePersonnel: (id: number, data: { name?: string; title?: string; responsibilities?: string }) =>
+    request<Personnel>(`${BASE}/settings/personnel/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePersonnel: (id: number) =>
+    request<void>(`${BASE}/settings/personnel/${id}`, { method: 'DELETE' }),
+
+  // Excel
+  exportTasksExcel: async (projectId: number) => {
+    const res = await fetch(`${BASE}/projects/${projectId}/tasks/export/excel`);
+    if (!res.ok) throw new Error('导出失败');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tasks.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
+  importTasksExcel: async (projectId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE}/projects/${projectId}/tasks/import/excel`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('导入失败');
+    return res.json();
+  },
+  confirmImportExcel: async (projectId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE}/projects/${projectId}/tasks/import/excel?confirm=true`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('确认导入失败');
+    return res.json();
+  },
+  downloadTemplate: async () => {
+    const res = await fetch(`${BASE}/tasks/template/excel`);
+    if (!res.ok) throw new Error('下载失败');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '任务导入模板.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
 
   // Import/Export
   exportProject: (projectId: number) =>

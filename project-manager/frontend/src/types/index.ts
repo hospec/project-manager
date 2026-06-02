@@ -2,8 +2,27 @@ export interface Project {
   id: number;
   name: string;
   description: string;
-  phase: 'planning' | 'execution' | 'monitoring' | 'closure';
+  phase: string;
   metadata: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectPhase {
+  id: number;
+  phase_key: string;
+  label: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Personnel {
+  id: number;
+  name: string;
+  title: string;
+  responsibilities: string;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +153,8 @@ export interface ExportData {
     issues: Issue[];
     notes: Note[];
     calendar_events: CalendarEvent[];
+    phases: ProjectPhase[];
+    personnel: Personnel[];
   };
 }
 

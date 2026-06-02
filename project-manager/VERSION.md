@@ -1,5 +1,29 @@
 # Version History
 
+## v0.2.2 — 2026-06-02
+
+### 修复 (6 issues)
+
+1. **删除项目阶段错误提示** — API 错误响应 JSON 现在正确解析，toast 显示干净的错误信息而非原始 JSON
+2. **负责人下拉选择** — 任务清单和待办清单的行内编辑负责人字段，现在支持从已配置人员中下拉选择
+3. **Excel 导入状态/优先级转换** — 中文标签（待办/进行中等）自动转换为英文值（todo/in_progress），不再全部显示为"阻塞"
+4. **Excel 导入日期格式** — 支持多种日期格式（2026/6/1、06-01-26、Excel 序列号等）自动规范化为 YYYY-MM-DD，日程表正确显示
+5. **日程表日期偏移一天** — toDateStr 改用本地时间代替 UTC，消除 UTC+8 时区导致的一天偏移
+6. **导入后列表不刷新** — await invalidateQueries 确保数据刷新完成后再结束
+
+### 优化 (2 issues)
+
+1. **日程表刷新加速** — staleTime 设为 0，任务增删改时同步 invalidate 日历缓存
+2. **日期选择一键弹出** — 点击日期单元格直接调用 showPicker()，无需二次点击
+
+### 涉及文件
+- `frontend/src/services/api.ts` — 错误响应 JSON 解析
+- `frontend/src/components/tasks/TaskTableRow.tsx` — 负责人下拉 + 日历缓存 + showPicker
+- `frontend/src/components/tasks/TaskTablePage.tsx` — 导入 await + 日历缓存
+- `frontend/src/components/issues/IssueListPage.tsx` — 负责人下拉 + showPicker
+- `frontend/src/components/calendar/CalendarPage.tsx` — 时区修复 + staleTime
+- `internal/server/excel.go` — 状态/优先级转换 + 日期规范化
+
 ## v0.1.2 — 2026-05-30
 
 **Commit:** 766d3e0

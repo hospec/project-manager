@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -89,16 +90,41 @@ func updateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input db.Project
+	// Fetch existing project first
+	var existing db.Project
+	err = db.DB.QueryRow(
+		`SELECT id, name, description, phase, metadata, created_at, updated_at FROM projects WHERE id=?`, id,
+	).Scan(&existing.ID, &existing.Name, &existing.Description, &existing.Phase, &existing.Metadata, &existing.CreatedAt, &existing.UpdatedAt)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "project not found")
+		return
+	}
+
+	// Decode partial update as a map to only apply provided fields
+	var input map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 
+	// Merge: only override fields present in the input
+	if v, ok := input["name"]; ok {
+		existing.Name = fmt.Sprint(v)
+	}
+	if v, ok := input["description"]; ok {
+		existing.Description = fmt.Sprint(v)
+	}
+	if v, ok := input["phase"]; ok {
+		existing.Phase = fmt.Sprint(v)
+	}
+	if v, ok := input["metadata"]; ok {
+		existing.Metadata = fmt.Sprint(v)
+	}
+
 	now := db.Now()
 	result, err := db.DB.Exec(
 		`UPDATE projects SET name=?, description=?, phase=?, metadata=?, updated_at=? WHERE id=?`,
-		input.Name, input.Description, input.Phase, input.Metadata, now, id,
+		existing.Name, existing.Description, existing.Phase, existing.Metadata, now, id,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -109,9 +135,9 @@ func updateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input.ID = id
-	input.UpdatedAt = now
-	writeJSON(w, http.StatusOK, input)
+	existing.ID = id
+	existing.UpdatedAt = now
+	writeJSON(w, http.StatusOK, existing)
 }
 
 func deleteProject(w http.ResponseWriter, r *http.Request) {

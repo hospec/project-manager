@@ -142,11 +142,11 @@ func importV1(data db.ExportPayload) error {
 		result, err := tx.Exec(
 			`INSERT INTO tasks (project_id, group_id, title, description, assignee, status, priority,
 			 planned_start_date, planned_end_date, actual_start_date, actual_end_date,
-			 sort_order, metadata, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 sort_order, progress, risk, metadata, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			newProjectID, newGroupID, t.Title, t.Description, t.Assignee, t.Status, t.Priority,
 			t.PlannedStartDate, t.PlannedEndDate, t.ActualStartDate, t.ActualEndDate,
-			t.SortOrder, t.Metadata, t.CreatedAt, t.UpdatedAt,
+			t.SortOrder, t.Progress, t.Risk, t.Metadata, t.CreatedAt, t.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("import task %q: %w", t.Title, err)
@@ -209,6 +209,28 @@ func importV1(data db.ExportPayload) error {
 		}
 	}
 
+	// Phases (global settings)
+	for _, ph := range data.Phases {
+		_, err := tx.Exec(
+			`INSERT OR IGNORE INTO project_phases (phase_key, label, color, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+			ph.PhaseKey, ph.Label, ph.Color, ph.SortOrder, ph.CreatedAt, ph.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("import phase %q: %w", ph.PhaseKey, err)
+		}
+	}
+
+	// Personnel (global settings)
+	for _, per := range data.PersonnelList {
+		_, err := tx.Exec(
+			`INSERT OR IGNORE INTO personnel (name, title, responsibilities, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+			per.Name, per.Title, per.Responsibilities, per.CreatedAt, per.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("import personnel %q: %w", per.Name, err)
+		}
+	}
+
 	return tx.Commit()
 }
 
@@ -227,6 +249,8 @@ func collectProjectData(projectID int64) db.ExportPayload {
 	data.Issues = collectRows[db.Issue](`SELECT `+issueColumns+` FROM issues WHERE project_id=?`, projectID, scanIssue)
 	data.Notes = collectRows[db.Note](`SELECT `+noteColumns+` FROM notes WHERE project_id=?`, projectID, scanNote)
 	data.CalendarEvents = collectRows[db.CalendarEvent](`SELECT id, project_id, task_id, date, completion_status, notes, metadata, created_at, updated_at FROM calendar_events WHERE project_id=?`, projectID, scanCalendarEvent)
+	data.Phases = collectAllRows[db.ProjectPhase](`SELECT id, phase_key, label, color, sort_order, created_at, updated_at FROM project_phases ORDER BY sort_order`, scanPhase)
+	data.PersonnelList = collectAllRows[db.Personnel](`SELECT id, name, title, responsibilities, created_at, updated_at FROM personnel ORDER BY name`, scanPersonnel)
 
 	return data
 }
@@ -239,6 +263,8 @@ func collectAllData() db.ExportPayload {
 	data.Issues = collectAllRows[db.Issue](`SELECT `+issueColumns+` FROM issues`, scanIssue)
 	data.Notes = collectAllRows[db.Note](`SELECT `+noteColumns+` FROM notes`, scanNote)
 	data.CalendarEvents = collectAllRows[db.CalendarEvent](`SELECT id, project_id, task_id, date, completion_status, notes, metadata, created_at, updated_at FROM calendar_events`, scanCalendarEvent)
+	data.Phases = collectAllRows[db.ProjectPhase](`SELECT id, phase_key, label, color, sort_order, created_at, updated_at FROM project_phases ORDER BY sort_order`, scanPhase)
+	data.PersonnelList = collectAllRows[db.Personnel](`SELECT id, name, title, responsibilities, created_at, updated_at FROM personnel ORDER BY name`, scanPersonnel)
 	return data
 }
 
@@ -276,6 +302,18 @@ func scanCalendarEvent(rows RowScanner) (db.CalendarEvent, error) {
 	var ce db.CalendarEvent
 	err := rows.Scan(&ce.ID, &ce.ProjectID, &ce.TaskID, &ce.Date, &ce.CompletionStatus, &ce.Notes, &ce.Metadata, &ce.CreatedAt, &ce.UpdatedAt)
 	return ce, err
+}
+
+func scanPhase(rows RowScanner) (db.ProjectPhase, error) {
+	var p db.ProjectPhase
+	err := rows.Scan(&p.ID, &p.PhaseKey, &p.Label, &p.Color, &p.SortOrder, &p.CreatedAt, &p.UpdatedAt)
+	return p, err
+}
+
+func scanPersonnel(rows RowScanner) (db.Personnel, error) {
+	var p db.Personnel
+	err := rows.Scan(&p.ID, &p.Name, &p.Title, &p.Responsibilities, &p.CreatedAt, &p.UpdatedAt)
+	return p, err
 }
 
 func collectRows[T any](query string, projectID int64, scanFn func(RowScanner) (T, error)) []T {

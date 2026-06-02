@@ -2,9 +2,9 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2 } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { Task } from '../../types';
+import type { Task, Personnel } from '../../types';
 import { api } from '../../services/api';
 import { PriorityBadge } from '../common/StatusBadge';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -57,6 +57,7 @@ export default function TaskTableRow({ task, projectId, rowNumber: _rowNumber, c
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['overview', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['calendar', projectId] });
     },
     onError: () => {
       toast.error('保存失败');
@@ -69,8 +70,15 @@ export default function TaskTableRow({ task, projectId, rowNumber: _rowNumber, c
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['overview', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['calendar', projectId] });
       toast.success('任务已删除');
     },
+  });
+
+  const { data: personnel = [] } = useQuery<Personnel[]>({
+    queryKey: ['personnel'],
+    queryFn: api.listPersonnel,
+    staleTime: 5 * 60 * 1000,
   });
 
   const startEdit = useCallback((col: ColKey, currentValue: string) => {
@@ -108,6 +116,10 @@ export default function TaskTableRow({ task, projectId, rowNumber: _rowNumber, c
       inputRef.current.focus();
       if (inputRef.current instanceof HTMLInputElement) {
         inputRef.current.select();
+        // Open date picker immediately for date fields
+        if (editingCol === 'planned_start_date' || editingCol === 'planned_end_date') {
+          try { inputRef.current.showPicker(); } catch {}
+        }
       }
     }
   }, [editingCol]);
@@ -264,23 +276,34 @@ export default function TaskTableRow({ task, projectId, rowNumber: _rowNumber, c
         )}
 
         {/* Assignee */}
-        {renderCell('assignee',
-          <span className={task.assignee ? 'text-gray-700 text-sm' : 'text-gray-400 text-sm'}>
-            {task.assignee || '-'}
-          </span>,
-          editingCol === 'assignee' ? (
-            <div className="task-table-cell cell-editing" style={{ width: colWidths.assignee || 100, flex: 'none', padding: '2px 6px' }}>
-              <input
-                ref={inputRef as React.Ref<HTMLInputElement>}
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                onBlur={saveEdit}
-                onKeyDown={handleKeyDown}
-                placeholder="负责人"
-                className="w-full text-xs text-gray-900 placeholder:text-gray-400 border-0 focus:outline-none bg-transparent"
-              />
-            </div>
-          ) : undefined
+        {editingCol === 'assignee' ? (
+          <div className="task-table-cell cell-editing" style={{ width: colWidths.assignee || 100, flex: 'none', padding: '2px 6px' }}>
+            <input
+              ref={inputRef as React.Ref<HTMLInputElement>}
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={handleKeyDown}
+              placeholder="负责人"
+              list="personnel-list-row"
+              className="w-full text-xs text-gray-900 placeholder:text-gray-400 border-0 focus:outline-none bg-transparent"
+            />
+            <datalist id="personnel-list-row">
+              {personnel.map(p => (
+                <option key={p.id} value={p.name}>{p.title ? `${p.name} — ${p.title}` : p.name}</option>
+              ))}
+            </datalist>
+          </div>
+        ) : (
+          <div
+            className={`task-table-cell cursor-pointer hover:bg-gray-50/50 ${savedCol === 'assignee' ? 'cell-saved' : ''}`}
+            style={{ width: colWidths.assignee || 100, flex: 'none' }}
+            onClick={() => startEdit('assignee', task.assignee || '')}
+          >
+            <span className={task.assignee ? 'text-gray-700 text-sm' : 'text-gray-400 text-sm'}>
+              {task.assignee || '-'}
+            </span>
+          </div>
         )}
 
         {/* Status */}

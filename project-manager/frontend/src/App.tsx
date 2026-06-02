@@ -8,6 +8,7 @@ import TasksPage from './pages/TasksPage';
 import CalendarPage from './pages/CalendarPage';
 import IssuesPage from './pages/IssuesPage';
 import NotesPage from './pages/NotesPage';
+import SettingsPage from './pages/SettingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/projects/:id/calendar" element={<CalendarPage />} />
               <Route path="/projects/:id/issues" element={<IssuesPage />} />
               <Route path="/projects/:id/notes" element={<NotesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Routes>
         </ProjectProvider>
